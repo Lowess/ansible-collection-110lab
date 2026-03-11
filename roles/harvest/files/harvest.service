@@ -1,0 +1,16 @@
+[Unit]
+Description=Harvest API
+After=network.target
+
+[Service]
+User=pi
+Environment=FLASK_ENV=prod
+WorkingDirectory=/home/pi/harvest
+# Ensure the lock has been cleaned up in case of uncontrolled app shutdown
+ExecStartPre=/usr/bin/redis-cli del harvest.dispatcher
+ExecStart=/home/pi/harvest/.env/bin/gunicorn 'harvest.wsgi:create_app()' -c 'python:harvest.gunicorn' -w 5
+
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

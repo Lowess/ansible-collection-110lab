@@ -1,0 +1,29 @@
+---
+namespace: lowess
+name: lab110
+version: "0.1.0"
+readme: README.md
+
+authors:
+  - Lowess
+
+description: Starter Ansible collection for 110lab automation.
+
+license:
+  - MIT
+
+tags:
+  - automation
+  - ansible
+  - lab
+  - infrastructure
+  - devops
+
+dependencies: {}
+
+repository: https://github.com/Lowess/ansible-collection-110lab
+documentation: https://github.com/Lowess/ansible-collection-110lab
+homepage: https://github.com/Lowess
+issues: https://github.com/Lowess/ansible-collection-110lab/issues
+
+build_ignore: []

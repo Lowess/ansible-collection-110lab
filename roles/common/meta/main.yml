@@ -1,0 +1,21 @@
+---
+dependencies: []
+
+galaxy_info:
+  author: Lowess
+  role_name: common
+  description: "Bare minimal common tasks to run on Linux"
+
+  company: "GrandsEnsemble Florian DAMBRINE"
+  license: BSD
+
+  min_ansible_version: 2.0
+
+  platforms:
+    - name: Ubuntu
+      versions:
+        - xenial
+
+  galaxy_tags:
+    - devops360
+    - common

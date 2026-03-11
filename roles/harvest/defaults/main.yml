@@ -1,0 +1,15 @@
+---
+# defaults file for harvest
+
+harvest_version: 0.0.5
+harvest_root: /home/pi/harvest
+harvest_force_update: false
+
+harvest_release_owner: Lowess
+harvest_release_repo: harvest
+harvest_release_version: "{{ harvest_version }}"
+harvest_release_asset_name: "harvest-{{ harvest_release_version }}.tar.gz"
+harvest_release_url: "https://github.com/{{ harvest_release_owner }}/{{ harvest_release_repo }}/releases/download/{{ harvest_release_version }}/{{ harvest_release_asset_name }}"
+
+# Optional YAML content written to /home/pi/.harvest/hardware.yml when set.
+harvest_hardware_config: ""

@@ -1,0 +1,12 @@
+---
+# handlers file for glow
+
+- name: Restart glow
+  systemd:
+    state: restarted
+    daemon_reload: yes
+    name: glow
+
+- name: Reboot glow host
+  reboot:
+    msg: "Rebooting to apply Raspberry Pi SPI configuration for Glow"

@@ -1,0 +1,17 @@
+[Unit]
+Description=Glow Remote Controller Service
+After=network.target
+
+[Service]
+User=pi
+Environment=ENV_FOR_DYNACONF=production
+Environment=GLOW_SIMULATOR_MODE=hardware
+Environment=SETTINGS_FILE_FOR_DYNACONF=/home/pi/.glow/settings.toml
+
+WorkingDirectory=/home/pi/glow
+ExecStart=/home/pi/glow/.env/bin/glow
+
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

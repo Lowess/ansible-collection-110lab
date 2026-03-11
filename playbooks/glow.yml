@@ -1,0 +1,12 @@
+---
+# export OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES
+
+- hosts: glow
+  become: true
+  vars:
+    glow_version: 0.0.3
+    glow_force_update: true
+  roles:
+    - name: glow
+      tags:
+        - glow

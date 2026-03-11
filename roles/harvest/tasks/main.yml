@@ -1,0 +1,111 @@
+---
+# tasks file for harvest
+
+- name: Install Redis
+  apt:
+    state: present
+    name: redis-server
+    update_cache: true
+    cache_valid_time: 360
+
+- name: Install Harvest python deps
+  apt:
+    state: present
+    name: "{{ item }}"
+    update_cache: true
+    cache_valid_time: 360
+  with_items:
+    - python3-pip
+    - python3-venv
+    - "python{{ ansible_python.version.major }}.{{ ansible_python.version.minor }}-venv"
+
+- name: Deploy the harvest systemd file
+  copy:
+    src: harvest.service
+    dest: /etc/systemd/system/harvest.service
+    owner: root
+    group: root
+    mode: 0644
+  notify:
+    - Restart harvest
+
+- name: Enable harvest at boot
+  systemd:
+    enabled: yes
+    name: harvest
+
+- block:
+  - name: Make harvest release folder
+    file:
+      state: directory
+      path: "{{ item }}"
+      owner: pi
+      group: pi
+      mode: 0755
+    with_items:
+      - "{{ harvest_root }}-{{ harvest_version }}"
+      - "/home/pi/.harvest"
+
+  - name: Copy harvest hardware.yaml configuration
+    copy:
+      content: "{{ harvest_hardware_config }}"
+      dest: /home/pi/.harvest/hardware.yml
+      owner: pi
+      group: pi
+      mode: "0644"
+    when: harvest_hardware_config | length > 0
+
+  - name: Remove stale harvest virtualenv on forced update
+    file:
+      state: absent
+      path: "{{ harvest_root }}-{{ harvest_version }}/.env"
+    when: harvest_force_update | bool
+
+  - name: Download harvest release archive from GitHub
+    get_url:
+      url: "{{ harvest_release_url }}"
+      dest: "{{ harvest_root }}-{{ harvest_version }}/{{ harvest_release_asset_name }}"
+      owner: pi
+      group: pi
+      mode: "0644"
+      force: "{{ harvest_force_update | bool }}"
+
+  - name: Create harvest virtualenv
+    command:
+      cmd: /usr/bin/python3 -m venv {{ harvest_root }}-{{ harvest_version }}/.env
+      creates: "{{ harvest_root }}-{{ harvest_version }}/.env/bin/python3"
+    become_user: pi
+
+  - name: Upgrade virtualenv packaging tools
+    pip:
+      name:
+        - pip
+        - setuptools
+        - wheel
+      state: latest
+      virtualenv: "{{ harvest_root }}-{{ harvest_version }}/.env"
+      virtualenv_command: /usr/bin/python3 -m venv
+    become_user: pi
+
+  - name: Install harvest package
+    pip:
+      name: "{{ harvest_root }}-{{ harvest_version }}/{{ harvest_release_asset_name }}"
+      virtualenv: "{{ harvest_root }}-{{ harvest_version }}/.env"
+      virtualenv_command: /usr/bin/python3 -m venv
+      extra_args: --upgrade
+    become_user: pi
+    notify:
+      - Restart harvest
+
+  - name: Update harvest symlink
+    file:
+      state: link
+      src: "{{ harvest_root }}-{{ harvest_version }}"
+      dest: "{{ harvest_root }}"
+      owner: pi
+      group: pi
+    notify:
+      - Restart harvest
+
+  tags:
+    - release

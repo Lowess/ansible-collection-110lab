@@ -1,0 +1,175 @@
+---
+# tasks file for glow
+
+- name: Install Python deps
+  apt:
+    state: present
+    name: "{{ item }}"
+    update_cache: true
+    cache_valid_time: 360
+  with_items:
+    - python3-pip
+    - python3-venv
+    - "python{{ ansible_python.version.major }}.{{ ansible_python.version.minor }}-venv"
+  tags:
+    - release
+
+- name: Ensure pi can access Raspberry Pi hardware devices
+  user:
+    name: pi
+    groups:
+      - gpio
+      - spi
+    append: true
+  tags:
+    - release
+
+- name: Check Raspberry Pi firmware boot config path
+  stat:
+    path: /boot/firmware/config.txt
+  register: glow_boot_firmware_config
+  tags:
+    - release
+
+- name: Check Raspberry Pi legacy boot config path
+  stat:
+    path: /boot/config.txt
+  register: glow_boot_config
+  tags:
+    - release
+
+- name: Enable SPI in Raspberry Pi firmware config
+  lineinfile:
+    path: "{{ item }}"
+    regexp: "^dtparam=spi="
+    line: "dtparam=spi=on"
+  loop:
+    - /boot/firmware/config.txt
+    - /boot/config.txt
+  when:
+    - item == "/boot/firmware/config.txt" and glow_boot_firmware_config.stat.exists
+      or item == "/boot/config.txt" and not glow_boot_firmware_config.stat.exists
+      and glow_boot_config.stat.exists
+  notify:
+    - Reboot glow host
+  tags:
+    - release
+
+- name: Ensure SPI kernel modules load at boot
+  copy:
+    dest: /etc/modules-load.d/glow-spi.conf
+    content: |
+      spi_bcm2835
+      spidev
+    owner: root
+    group: root
+    mode: 0644
+  notify:
+    - Reboot glow host
+  tags:
+    - release
+
+- name: Load SPI kernel modules for current session
+  command:
+    cmd: "{{ item }}"
+  loop:
+    - modprobe spi_bcm2835
+    - modprobe spidev
+  changed_when: false
+  tags:
+    - release
+
+- name: Deploy the glow systemd file
+  copy:
+    src: "{{ item }}.service"
+    dest: "/etc/systemd/system/{{ item }}.service"
+    owner: root
+    group: root
+    mode: 0644
+  with_items: "{{ glow_features }}"
+  notify:
+    - Restart glow
+
+- name: Enable glow at boot
+  systemd:
+    enabled: true
+    name: "{{ item }}"
+  with_items: "{{ glow_features }}"
+
+- block:
+  - name: Make glow release folder
+    file:
+      state: directory
+      path: "{{ item }}"
+      owner: pi
+      group: pi
+      mode: 0755
+    with_items:
+      - "{{ glow_root }}-{{ glow_version }}"
+      - "/home/pi/.glow"
+
+  - name: Remove stale glow virtualenv on forced update
+    file:
+      state: absent
+      path: "{{ glow_root }}-{{ glow_version }}/.env"
+    when: glow_force_update | bool
+
+  - name: Download glow release archive from GitHub
+    get_url:
+      url: "{{ glow_release_url }}"
+      dest: "{{ glow_root }}-{{ glow_version }}/{{ glow_release_asset_name }}"
+      owner: pi
+      group: pi
+      mode: "0644"
+      force: "{{ glow_force_update | bool }}"
+
+  - name: Create glow virtualenv
+    command:
+      cmd: /usr/bin/python3 -m venv {{ glow_root }}-{{ glow_version }}/.env
+      creates: "{{ glow_root }}-{{ glow_version }}/.env/bin/python3"
+    become_user: pi
+
+  - name: Upgrade virtualenv packaging tools
+    pip:
+      name:
+        - pip
+        - setuptools
+        - wheel
+      state: latest
+      virtualenv: "{{ glow_root }}-{{ glow_version }}/.env"
+      virtualenv_command: /usr/bin/python3 -m venv
+    become_user: pi
+
+  - name: Install glow package
+    pip:
+      name: "{{ glow_root }}-{{ glow_version }}/{{ glow_release_asset_name }}"
+      virtualenv: "{{ glow_root }}-{{ glow_version }}/.env"
+      virtualenv_command: /usr/bin/python3 -m venv
+      extra_args: --upgrade
+    become_user: pi
+    notify:
+      - Restart glow
+
+  - name: Install glow Raspberry Pi runtime dependencies
+    pip:
+      name:
+        - evdev>=1.9
+        - RPi.GPIO==0.7.1
+        - rpi-ws281x==4.2.4
+      virtualenv: "{{ glow_root }}-{{ glow_version }}/.env"
+      virtualenv_command: /usr/bin/python3 -m venv
+      extra_args: --upgrade
+    become_user: pi
+
+  - name: Update glow symlink
+    file:
+      state: link
+      src: "{{ glow_root }}-{{ glow_version }}"
+      dest: "{{ glow_root }}"
+      owner: pi
+      group: pi
+    notify:
+      - Restart glow
+
+  tags:
+    - release

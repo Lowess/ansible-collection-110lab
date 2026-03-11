@@ -1,0 +1,7 @@
+---
+- name: Test the collection skeleton
+  hosts: localhost
+  gather_facts: false
+
+  roles:
+    - lowess.lab110.common

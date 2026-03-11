@@ -1,0 +1,19 @@
+---
+galaxy_info:
+  author: Lowess
+  role_name: glow
+  description: Install and configure Glow from GitHub release artifacts.
+  license: MIT
+  min_ansible_version: "2.15"
+  platforms:
+    - name: Debian
+      versions:
+        - all
+  galaxy_tags:
+    - glow
+    - raspberrypi
+    - automation
+    - lighting
+
+dependencies:
+  - common

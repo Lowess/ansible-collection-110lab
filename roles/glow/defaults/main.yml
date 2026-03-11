@@ -1,0 +1,15 @@
+---
+# defaults file for glow
+
+glow_version: 0.0.1
+glow_root: /home/pi/glow
+glow_force_update: false
+
+glow_release_owner: Lowess
+glow_release_repo: glow
+glow_release_version: "{{ glow_version }}"
+glow_release_asset_name: "glow-{{ glow_release_version }}.tar.gz"
+glow_release_url: "https://github.com/{{ glow_release_owner }}/{{ glow_release_repo }}/releases/download/{{ glow_release_version }}/{{ glow_release_asset_name }}"
+
+glow_features:
+  - glow
