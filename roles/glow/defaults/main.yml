@@ -11,5 +11,9 @@ glow_release_version: "{{ glow_version }}"
 glow_release_asset_name: "glow-{{ glow_release_version }}.tar.gz"
 glow_release_url: "https://github.com/{{ glow_release_owner }}/{{ glow_release_repo }}/releases/download/{{ glow_release_version }}/{{ glow_release_asset_name }}"
 
+glow_uv_install_dir: /usr/local/bin
+glow_uv_binary: "{{ glow_uv_install_dir }}/uv"
+glow_uv_installer_url: https://astral.sh/uv/install.sh
+
 glow_features:
   - glow

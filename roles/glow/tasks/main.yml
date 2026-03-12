@@ -1,16 +1,40 @@
 ---
 # tasks file for glow
 
-- name: Install Python deps
+- name: Install glow host prerequisites
   apt:
     state: present
     name: "{{ item }}"
     update_cache: true
     cache_valid_time: 360
   with_items:
-    - python3-pip
-    - python3-venv
-    - "python{{ ansible_python.version.major }}.{{ ansible_python.version.minor }}-venv"
+    - ca-certificates
+    - curl
+  tags:
+    - release
+
+- name: Check whether uv is installed
+  stat:
+    path: "{{ glow_uv_binary }}"
+  register: glow_uv_installed
+  tags:
+    - release
+
+- name: Download uv installer
+  get_url:
+    url: "{{ glow_uv_installer_url }}"
+    dest: /tmp/glow-install-uv.sh
+    mode: "0755"
+  when: not glow_uv_installed.stat.exists
+  tags:
+    - release
+
+- name: Install uv
+  command:
+    cmd: sh /tmp/glow-install-uv.sh
+  environment:
+    UV_UNMANAGED_INSTALL: "{{ glow_uv_install_dir }}"
+  when: not glow_uv_installed.stat.exists
   tags:
     - release
 
@@ -97,6 +121,11 @@
   with_items: "{{ glow_features }}"
 
 - block:
+  - name: Check whether glow is already installed in the virtualenv
+    stat:
+      path: "{{ glow_root }}-{{ glow_version }}/.env/bin/glow"
+    register: glow_installed_binary
+
   - name: Make glow release folder
     file:
       state: directory
@@ -122,44 +151,44 @@
       group: pi
       mode: "0644"
       force: "{{ glow_force_update | bool }}"
+    register: glow_release_download
 
-  - name: Create glow virtualenv
+  - name: Create glow uv virtualenv
     command:
-      cmd: /usr/bin/python3 -m venv {{ glow_root }}-{{ glow_version }}/.env
+      cmd: "{{ glow_uv_binary }} venv {{ glow_root }}-{{ glow_version }}/.env --python /usr/bin/python3"
       creates: "{{ glow_root }}-{{ glow_version }}/.env/bin/python3"
     become_user: pi
+    register: glow_uv_venv
 
-  - name: Upgrade virtualenv packaging tools
-    pip:
-      name:
-        - pip
-        - setuptools
-        - wheel
-      state: latest
-      virtualenv: "{{ glow_root }}-{{ glow_version }}/.env"
-      virtualenv_command: /usr/bin/python3 -m venv
+  - name: Install glow package with uv
+    command:
+      cmd: >-
+        {{ glow_uv_binary }} pip install
+        --python {{ glow_root }}-{{ glow_version }}/.env/bin/python
+        {{ glow_root }}-{{ glow_version }}/{{ glow_release_asset_name }}
     become_user: pi
-
-  - name: Install glow package
-    pip:
-      name: "{{ glow_root }}-{{ glow_version }}/{{ glow_release_asset_name }}"
-      virtualenv: "{{ glow_root }}-{{ glow_version }}/.env"
-      virtualenv_command: /usr/bin/python3 -m venv
-      extra_args: --upgrade
-    become_user: pi
+    when:
+      - glow_force_update | bool
+        or glow_release_download.changed
+        or glow_uv_venv.changed
+        or not glow_installed_binary.stat.exists
     notify:
       - Restart glow
 
-  - name: Install glow Raspberry Pi runtime dependencies
-    pip:
-      name:
-        - evdev>=1.9
-        - RPi.GPIO==0.7.1
-        - rpi-ws281x==4.2.4
-      virtualenv: "{{ glow_root }}-{{ glow_version }}/.env"
-      virtualenv_command: /usr/bin/python3 -m venv
-      extra_args: --upgrade
+  - name: Install glow Raspberry Pi runtime dependencies with uv
+    command:
+      cmd: >-
+        {{ glow_uv_binary }} pip install
+        --python {{ glow_root }}-{{ glow_version }}/.env/bin/python
+        evdev>=1.9
+        RPi.GPIO==0.7.1
+        rpi-ws281x==4.2.4
     become_user: pi
+    when:
+      - glow_force_update | bool
+        or glow_release_download.changed
+        or glow_uv_venv.changed
+        or not glow_installed_binary.stat.exists
 
   - name: Update glow symlink
     file:
