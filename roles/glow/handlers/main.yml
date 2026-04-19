@@ -4,7 +4,7 @@
 - name: Restart glow
   systemd:
     state: restarted
-    daemon_reload: yes
+    daemon_reload: true
     name: glow
 
 - name: Reboot glow host

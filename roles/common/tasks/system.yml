@@ -39,15 +39,6 @@
 ######################################################################
 
 - name: Configure the timezone
-  timezone:
+  community.general.timezone:
     name: "{{ common_timezone }}"
-  register: __common_localtime
-
-- name: Restart cron and rsyslog to activate the new timezone
-  service:
-    state: restarted
-    name: "{{ item }}"
-  with_items:
-    - cron
-    - rsyslog
-  when: __common_localtime is changed
+  notify: Restart time-sensitive services

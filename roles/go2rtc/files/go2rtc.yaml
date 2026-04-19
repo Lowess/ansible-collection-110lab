@@ -1,2 +1,3 @@
+---
 streams:
   cam: exec:libcamera-vid --width 1024 --height 576 --framerate 15 -t 0 --inline -o -

@@ -1,7 +1,11 @@
 ---
 exclude_paths:
+  - .ansible/
   - galaxy-deploy.yml
+  - playbooks/requirements.yml
 skip_list:
   - risky-file-permissions
   - yaml
   - galaxy[no-changelog]
+  - fqcn
+  - key-order

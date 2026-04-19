@@ -1,6 +1,12 @@
 ---
 # tasks file for common
 #
-- import_tasks: apt.yml
-- import_tasks: system.yml
-- import_tasks: user.yml
+
+- name: Load package tasks
+  import_tasks: apt.yml
+
+- name: Load system tasks
+  import_tasks: system.yml
+
+- name: Load user tasks
+  import_tasks: user.yml

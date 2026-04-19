@@ -6,7 +6,7 @@
   apt:
     state: present
     name: "{{ item }}"
-    update_cache: yes
+    update_cache: true
     cache_valid_time: 3600
   environment:
     DEBIAN_FRONTEND: noninteractive
