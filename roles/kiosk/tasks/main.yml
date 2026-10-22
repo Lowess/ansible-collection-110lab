@@ -1,0 +1,128 @@
+---
+- name: Validate kiosk configuration
+  ansible.builtin.assert:
+    that:
+      - kiosk_user | length > 0
+      - kiosk_user != 'root'
+      - kiosk_url is match('^https?://')
+      - kiosk_browser_mode in ['app', 'fullscreen']
+      - kiosk_restart_delay | int >= 1
+      - kiosk_splash_rotation in [0, 90, 180, 270]
+      - not (kiosk_splash_enabled | bool) or kiosk_splash_image | length > 0
+    fail_msg: Set an HTTP(S) kiosk_url, a non-root kiosk_user, and kiosk_browser_mode to app or fullscreen.
+
+- name: Look up kiosk user
+  ansible.builtin.getent:
+    database: passwd
+    key: "{{ kiosk_user }}"
+
+- name: Record kiosk home directory
+  ansible.builtin.set_fact:
+    kiosk_home: "{{ getent_passwd[kiosk_user][4] }}"
+
+- name: Check for Raspberry Pi OS desktop compositor
+  ansible.builtin.stat:
+    path: /usr/bin/labwc
+  register: kiosk_labwc
+
+- name: Require Raspberry Pi OS Desktop with labwc
+  ansible.builtin.assert:
+    that:
+      - kiosk_labwc.stat.exists
+    fail_msg: This role requires Raspberry Pi OS Desktop with labwc.
+
+- name: Check effective user for system changes
+  ansible.builtin.command: id -u
+  become: true
+  become_user: root
+  changed_when: false
+  register: kiosk_effective_uid
+
+- name: Require root privileges for system changes
+  ansible.builtin.assert:
+    that:
+      - kiosk_effective_uid.stdout == '0'
+    fail_msg: The kiosk role needs working sudo/root privilege escalation on the target host.
+
+- name: Install Chromium
+  ansible.builtin.apt:
+    name: "{{ kiosk_browser_package }}"
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+  become: true
+  become_user: root
+
+- name: Configure desktop auto login
+  ansible.builtin.command: raspi-config nonint do_boot_behaviour B4
+  become: true
+  become_user: root
+  changed_when: false
+  when: kiosk_desktop_autologin | bool
+
+- name: Disable screen blanking
+  ansible.builtin.command: raspi-config nonint do_blanking 1
+  become: true
+  become_user: root
+  changed_when: false
+  when: kiosk_disable_screen_blanking | bool
+
+- name: Create kiosk directories
+  ansible.builtin.file:
+    path: "{{ kiosk_home }}/{{ item }}"
+    state: directory
+    owner: "{{ kiosk_user }}"
+    mode: "0755"
+  become: true
+  become_user: root
+  loop:
+    - .config/labwc
+    - .config/kiosk
+    - .local/bin
+    - .local/share/kiosk
+
+- name: Install kiosk browser launcher
+  ansible.builtin.template:
+    src: kiosk-browser.sh.j2
+    dest: "{{ kiosk_home }}/.local/bin/kiosk-browser"
+    owner: "{{ kiosk_user }}"
+    mode: "0755"
+  become: true
+  become_user: root
+
+- name: Launch kiosk browser with labwc session
+  ansible.builtin.blockinfile:
+    path: "{{ kiosk_home }}/.config/labwc/autostart"
+    create: true
+    owner: "{{ kiosk_user }}"
+    mode: "0644"
+    marker: "# {mark} ANSIBLE KIOSK"
+    block: |
+      {% if kiosk_splash_enabled | bool %}
+      /usr/bin/swaybg --image {{ '/usr/local/share/kiosk/splash.png' | quote }} --mode fit --color 000000 >/dev/null 2>&1 &
+      sleep 1
+      {% endif %}
+      "{{ kiosk_home }}/.local/bin/kiosk-browser" &
+  become: true
+  become_user: root
+
+- name: Configure graphical boot splash
+  ansible.builtin.include_tasks: splash.yml
+  when: kiosk_splash_enabled | bool
+
+- name: Check for framebuffer splash service
+  ansible.builtin.stat:
+    path: /etc/systemd/system/kiosk-splash.service
+  register: kiosk_existing_splash_service
+  when: not kiosk_splash_enabled | bool
+
+- name: Disable framebuffer splash when requested
+  ansible.builtin.systemd_service:
+    name: kiosk-splash.service
+    enabled: false
+    state: stopped
+  become: true
+  become_user: root
+  when:
+    - not kiosk_splash_enabled | bool
+    - kiosk_existing_splash_service.stat.exists | default(false)

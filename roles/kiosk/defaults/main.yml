@@ -1,0 +1,15 @@
+---
+kiosk_user: pi
+kiosk_url: ""
+kiosk_browser_package: chromium
+kiosk_browser_binary: /usr/bin/chromium
+kiosk_browser_mode: fullscreen
+kiosk_restart_delay: 5
+kiosk_desktop_autologin: true
+kiosk_disable_screen_blanking: true
+
+# Show the bundled image during boot with fbi and behind Chromium with swaybg.
+kiosk_splash_enabled: true
+kiosk_splash_image: splash.png
+# Clockwise rotation of the PNG used by both displays.
+kiosk_splash_rotation: 0
