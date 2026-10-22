@@ -1,0 +1,14 @@
+---
+kiosk_user: pi
+kiosk_url: ""
+kiosk_browser_package: chromium
+kiosk_browser_binary: /usr/bin/chromium
+kiosk_browser_mode: fullscreen
+kiosk_restart_delay: 5
+kiosk_desktop_autologin: true
+kiosk_disable_screen_blanking: true
+
+# Optional controller-side image path. Empty disables splash management.
+kiosk_splash_image: ""
+# Clockwise rotation applied to the source image before the early boot splash.
+kiosk_splash_rotation: 0

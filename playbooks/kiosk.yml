@@ -1,0 +1,12 @@
+---
+# export OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES
+
+- name: Configure kiosk hosts
+  hosts: kiosk
+  become: true
+  vars:
+    kiosk_url: https://example.com
+  roles:
+    - role: kiosk
+      tags:
+        - kiosk

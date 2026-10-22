@@ -1,0 +1,17 @@
+---
+galaxy_info:
+  author: Lowess
+  role_name: kiosk
+  description: Run a Chromium kiosk on Raspberry Pi OS Desktop with labwc.
+  license: MIT
+  min_ansible_version: "2.15"
+  platforms:
+    - name: Debian
+      versions:
+        - all
+  galaxy_tags:
+    - kiosk
+    - raspberrypi
+    - chromium
+
+dependencies: []

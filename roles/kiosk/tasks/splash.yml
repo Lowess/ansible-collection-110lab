@@ -1,0 +1,126 @@
+---
+- name: Install Raspberry Pi splash support and image converter
+  ansible.builtin.apt:
+    name:
+      - rpi-splash-screen-support
+      - imagemagick
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+  become: true
+  become_user: root
+
+- name: Create splash work directory
+  ansible.builtin.file:
+    path: /usr/local/share/kiosk
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  become: true
+  become_user: root
+
+- name: Copy source splash image from Ansible controller
+  ansible.builtin.copy:
+    src: "{{ kiosk_splash_image }}"
+    dest: /usr/local/share/kiosk/splash-source
+    owner: root
+    group: root
+    mode: "0644"
+  become: true
+  become_user: root
+  register: kiosk_splash_source
+
+- name: Check converted splash image
+  ansible.builtin.stat:
+    path: /usr/local/share/kiosk/splash.tga
+  register: kiosk_splash_tga
+
+- name: Record splash rotation
+  ansible.builtin.copy:
+    content: "{{ kiosk_splash_rotation | string }}\n"
+    dest: /usr/local/share/kiosk/splash-rotation
+    owner: root
+    group: root
+    mode: "0644"
+  become: true
+  become_user: root
+  register: kiosk_splash_rotation_file
+
+- name: Convert splash image to Raspberry Pi early boot format
+  ansible.builtin.command:
+    argv:
+      - convert
+      - /usr/local/share/kiosk/splash-source
+      - -background
+      - black
+      - -rotate
+      - "{{ kiosk_splash_rotation | string }}"
+      - -resize
+      - "1920x1080>"
+      - -colors
+      - "224"
+      - -depth
+      - "8"
+      - -type
+      - TrueColor
+      - -alpha
+      - "off"
+      - -compress
+      - none
+      - -define
+      - "tga:bits-per-sample=8"
+      - /usr/local/share/kiosk/splash.tga
+  become: true
+  become_user: root
+  register: kiosk_splash_conversion
+  changed_when: true
+  when: >-
+    kiosk_splash_source.changed or
+    kiosk_splash_rotation_file.changed or
+    not kiosk_splash_tga.stat.exists
+
+- name: Read kernel command line
+  ansible.builtin.slurp:
+    src: /boot/firmware/cmdline.txt
+  become: true
+  become_user: root
+  register: kiosk_boot_cmdline
+
+- name: Configure fullscreen early boot splash
+  ansible.builtin.command:
+    argv:
+      - configure-splash
+      - /usr/local/share/kiosk/splash.tga
+  become: true
+  become_user: root
+  changed_when: true
+  when: >-
+    kiosk_splash_conversion is changed or
+    'fullscreen_logo=1' not in (kiosk_boot_cmdline.content | b64decode) or
+    'fullscreen_logo_name=logo.tga' not in (kiosk_boot_cmdline.content | b64decode)
+
+- name: Read kernel command line after splash setup
+  ansible.builtin.slurp:
+    src: /boot/firmware/cmdline.txt
+  become: true
+  become_user: root
+  register: kiosk_boot_cmdline_configured
+
+- name: Disable an existing systemd boot status setting
+  ansible.builtin.replace:
+    path: /boot/firmware/cmdline.txt
+    regexp: '(^| )systemd\.show_status=[^ \r\n]+'
+    replace: '\1systemd.show_status=false'
+  become: true
+  become_user: root
+  when: "'systemd.show_status=' in (kiosk_boot_cmdline_configured.content | b64decode)"
+
+- name: Hide routine systemd boot status on screen
+  ansible.builtin.replace:
+    path: /boot/firmware/cmdline.txt
+    regexp: '^([^\n]+)$'
+    replace: '\1 systemd.show_status=false'
+  become: true
+  become_user: root
+  when: "'systemd.show_status=' not in (kiosk_boot_cmdline_configured.content | b64decode)"
