@@ -8,7 +8,7 @@ kiosk_restart_delay: 5
 kiosk_desktop_autologin: true
 kiosk_disable_screen_blanking: true
 
-# Optional controller-side image path. Empty disables splash management.
-kiosk_splash_image: ""
+# Bundled controller-side image. Set to "" to leave the boot splash untouched.
+kiosk_splash_image: splash.png
 # Clockwise rotation applied to the source image before the early boot splash.
 kiosk_splash_rotation: 0

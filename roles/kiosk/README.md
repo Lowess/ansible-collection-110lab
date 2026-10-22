@@ -34,7 +34,7 @@ account requires one.
 | `kiosk_restart_delay` | `5` | Seconds before restarting Chromium after exit |
 | `kiosk_desktop_autologin` | `true` | Enable desktop auto login with `raspi-config` |
 | `kiosk_disable_screen_blanking` | `true` | Keep the kiosk display on |
-| `kiosk_splash_image` | empty | Optional image on the Ansible controller for the early boot splash |
+| `kiosk_splash_image` | `splash.png` | Bundled early boot splash; set to an absolute controller path to override or `""` to disable |
 | `kiosk_splash_rotation` | `0` | Rotate the source image clockwise by 0, 90, 180, or 270 degrees |
 
 ## Usage
@@ -49,13 +49,13 @@ account requires one.
       vars:
         kiosk_user: pi
         kiosk_url: "https://example.com/"
-        kiosk_splash_image: splash.png
         kiosk_splash_rotation: 0
 ```
 
-Place `splash.png` in `roles/kiosk/files/`, or set `kiosk_splash_image` to an
-absolute file path on the Ansible controller. Leave the variable empty to
-keep the current boot splash untouched. When an image is set, the role uses
+The role includes `roles/kiosk/files/splash.png` and applies it by default.
+Set `kiosk_splash_image` to an absolute file path on the Ansible controller
+to use another image, or set it to `""` to keep the current boot splash
+untouched. When an image is set, the role uses
 Raspberry Pi OS's `rpi-splash-screen-support` tool to show it during early boot.
 It converts the source to the required 24-bit, uncompressed TGA with no more
 than 224 colours and dimensions no larger than 1920 x 1080. For a portrait
