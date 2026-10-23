@@ -1,0 +1,13 @@
+[Unit]
+Description=Kiosk framebuffer splash
+After=systemd-udev-trigger.service
+Before=display-manager.service
+ConditionPathExists=/usr/local/share/kiosk/splash.png
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/kiosk-splash
+TimeoutStartSec=10s
+
+[Install]
+WantedBy=graphical.target
