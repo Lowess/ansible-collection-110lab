@@ -66,8 +66,8 @@ This splash starts after Linux has begun booting; it cannot hide firmware or
 very early kernel messages. Raspberry Pi OS may also show its own Plymouth
 screen. A reboot is required to see the boot splash; a desktop logout/login is
 enough to check the Wayland background. To use another image, set
-`kiosk_splash_image` to an absolute PNG
-path on the Ansible controller. For a portrait panel, adjust
+`kiosk_splash_image` to an absolute PNG path on the Ansible controller. For a
+portrait panel, adjust
 `kiosk_splash_rotation` after checking the first boot.
 
 After the first run, log out and back in or reboot once to start the kiosk
