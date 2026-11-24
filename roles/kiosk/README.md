@@ -31,13 +31,10 @@ account requires one.
 | `kiosk_url` | empty, required | HTTP(S) page to display |
 | `kiosk_browser_package` | `chromium` | Debian package to install |
 | `kiosk_browser_binary` | `/usr/bin/chromium` | Browser executable |
-| `kiosk_browser_mode` | `app` | `app` for on-screen keyboard; `fullscreen` for true kiosk fullscreen |
+| `kiosk_browser_mode` | `fullscreen` | `app` for on-screen keyboard; `fullscreen` for true kiosk fullscreen |
 | `kiosk_restart_delay` | `5` | Seconds before restarting Chromium after exit |
 | `kiosk_desktop_autologin` | `true` | Enable desktop auto login with `raspi-config` |
 | `kiosk_disable_screen_blanking` | `true` | Keep the kiosk display on |
-| `kiosk_splash_enabled` | `true` | Show the PNG during boot and behind Chromium; set to `false` to disable |
-| `kiosk_splash_image` | `splash.png` | Bundled PNG, or supply a controller-side image path |
-| `kiosk_splash_rotation` | `0` | Rotate the PNG clockwise by 0, 90, 180, or 270 degrees |
 | `kiosk_touch_calibration_enabled` | `true` | Install the measured ILITEK udev calibration rule; disable for other panel orientations |
 
 ## Usage
@@ -48,21 +45,22 @@ account requires one.
   hosts: kiosk
   become: true
   roles:
-    - role: lowess.lab110.kiosk
+    - role: splash
+      vars:
+        splash_user: pi
+        splash_rotation: 0
+    - role: kiosk
       vars:
         kiosk_user: pi
         kiosk_url: "https://example.com/"
-        kiosk_splash_rotation: 0
 ```
 
-The role includes the standalone `splash` role. It draws the PNG once on
-`/dev/fb0` using `fbi` and shows the same image as the labwc desktop background
-using `swaybg`. The kiosk variables above are passed to `splash` for backward
-compatibility. See [the splash role](../splash/README.md) for standalone usage.
+The [splash role](../splash/README.md) is separate. The example and
+`playbooks/kiosk.yml` compose it with `kiosk` so it draws the boot image and
+sets the labwc desktop background.
 
-To use another image, set `kiosk_splash_image` to an absolute PNG path on the
-Ansible controller. For a portrait panel, adjust `kiosk_splash_rotation` after
-checking the first boot.
+Set `splash_image` and `splash_rotation` on the splash role to customize the
+image and its orientation.
 
 The touchscreen calibration is installed as
 `/etc/udev/rules.d/99-ilitek-touch-calibration.rules`. It matches only ILITEK

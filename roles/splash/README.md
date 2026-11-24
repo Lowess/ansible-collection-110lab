@@ -1,7 +1,7 @@
 # splash
 
 Show an image during Raspberry Pi boot and as the labwc desktop background.
-The role works on its own or through the `kiosk` role. It installs `fbi`,
+The role works on its own or alongside `kiosk` in a playbook. It installs `fbi`,
 `swaybg`, and ImageMagick, prepares one PNG, enables a framebuffer service,
 and starts the Wayland background from the desktop user's labwc autostart.
 
@@ -22,7 +22,7 @@ and starts the Wayland background from the desktop user's labwc autostart.
   hosts: kiosk
   become: true
   roles:
-    - role: lowess.lab110.splash
+    - role: splash
       vars:
         splash_user: pi
         splash_image: splash.png
