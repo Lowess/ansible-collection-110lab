@@ -13,6 +13,13 @@
   become_user: root
   when: splash_autostart.stat.exists
 
+- name: Remove desktop background launcher
+  ansible.builtin.file:
+    path: "{{ splash_home }}/.local/bin/splash-background"
+    state: absent
+  become: true
+  become_user: root
+
 - name: Check framebuffer splash services
   ansible.builtin.stat:
     path: "/etc/systemd/system/{{ item }}"
