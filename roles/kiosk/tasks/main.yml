@@ -90,6 +90,9 @@
   become: true
   become_user: root
 
+- name: Configure ILITEK touch calibration
+  ansible.builtin.include_tasks: touch.yml
+
 - name: Launch kiosk browser with labwc session
   ansible.builtin.blockinfile:
     path: "{{ kiosk_home }}/.config/labwc/autostart"
@@ -98,32 +101,16 @@
     mode: "0644"
     marker: "# {mark} ANSIBLE KIOSK"
     block: |
-      {% if kiosk_splash_enabled | bool %}
-      /usr/bin/swaybg --image {{ '/usr/local/share/kiosk/splash.png' | quote }} --mode fit --color 000000 >/dev/null 2>&1 &
-      sleep 1
-      {% endif %}
       wlr-randr --output HDMI-A-1 --transform 270 &
       "{{ kiosk_home }}/.local/bin/kiosk-browser" &
   become: true
   become_user: root
 
-- name: Configure graphical boot splash
-  ansible.builtin.include_tasks: splash.yml
-  when: kiosk_splash_enabled | bool
-
-- name: Check for framebuffer splash service
-  ansible.builtin.stat:
-    path: /etc/systemd/system/kiosk-splash.service
-  register: kiosk_existing_splash_service
-  when: not kiosk_splash_enabled | bool
-
-- name: Disable framebuffer splash when requested
-  ansible.builtin.systemd_service:
-    name: kiosk-splash.service
-    enabled: false
-    state: stopped
-  become: true
-  become_user: root
-  when:
-    - not kiosk_splash_enabled | bool
-    - kiosk_existing_splash_service.stat.exists | default(false)
+- name: Configure splash screen and desktop background
+  ansible.builtin.include_role:
+    name: lowess.lab110.splash
+  vars:
+    splash_user: "{{ kiosk_user }}"
+    splash_enabled: "{{ kiosk_splash_enabled }}"
+    splash_image: "{{ kiosk_splash_image }}"
+    splash_rotation: "{{ kiosk_splash_rotation }}"

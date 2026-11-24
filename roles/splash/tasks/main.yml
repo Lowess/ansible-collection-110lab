@@ -1,0 +1,47 @@
+---
+- name: Validate splash configuration
+  ansible.builtin.assert:
+    that:
+      - splash_user | length > 0
+      - splash_user != 'root'
+      - (splash_rotation | string) in ['0', '90', '180', '270']
+      - not (splash_enabled | bool) or splash_image | length > 0
+
+- name: Look up splash user
+  ansible.builtin.getent:
+    database: passwd
+    key: "{{ splash_user }}"
+
+- name: Record splash home directory
+  ansible.builtin.set_fact:
+    splash_home: "{{ getent_passwd[splash_user][4] }}"
+
+- name: Check for labwc
+  ansible.builtin.stat:
+    path: /usr/bin/labwc
+  register: splash_labwc
+
+- name: Require labwc when splash is enabled
+  ansible.builtin.assert:
+    that:
+      - splash_labwc.stat.exists
+    fail_msg: The splash role requires Raspberry Pi OS Desktop with labwc.
+  when: splash_enabled | bool
+
+- name: Create labwc configuration directory
+  ansible.builtin.file:
+    path: "{{ splash_home }}/.config/labwc"
+    state: directory
+    owner: "{{ splash_user }}"
+    mode: "0755"
+  become: true
+  become_user: root
+  when: splash_enabled | bool
+
+- name: Configure boot splash and desktop background
+  ansible.builtin.include_tasks: enabled.yml
+  when: splash_enabled | bool
+
+- name: Disable boot splash and desktop background
+  ansible.builtin.include_tasks: disabled.yml
+  when: not (splash_enabled | bool)

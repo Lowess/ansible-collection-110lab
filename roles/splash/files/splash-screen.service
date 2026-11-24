@@ -1,12 +1,12 @@
 [Unit]
-Description=Kiosk framebuffer splash
+Description=Raspberry Pi framebuffer splash
 After=systemd-udev-trigger.service
 Before=display-manager.service
-ConditionPathExists=/usr/local/share/kiosk/splash.png
+ConditionPathExists=/usr/local/share/splash-screen/splash.png
 
 [Service]
 Type=oneshot
-ExecStart=/usr/local/bin/kiosk-splash
+ExecStart=/usr/local/bin/splash-screen
 TimeoutStartSec=10s
 
 [Install]

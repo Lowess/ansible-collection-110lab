@@ -1,11 +1,12 @@
 # kiosk
 
-Run a web page in a Chromium app window on Raspberry Pi OS Desktop with labwc.
-Chromium starts after desktop auto login and restarts if it exits. The desktop
-remains underneath for troubleshooting, and SSH remains available. The role
-leaves display orientation, touch configuration, and Wi-Fi credentials alone.
+Run a web page in Chromium on Raspberry Pi OS Desktop with labwc. Chromium
+starts after desktop auto login and restarts if it exits. The desktop remains
+underneath for troubleshooting, and SSH remains available. The role rotates
+`HDMI-A-1` by 270 degrees and configures the ILITEK touchscreen to match.
+It leaves Wi-Fi credentials alone.
 
-The default `app` mode opens a maximized window without Chromium tabs or an
+The optional `app` mode opens a maximized window without Chromium tabs or an
 address bar. It lets the Raspberry Pi OS on-screen keyboard appear above the
 page when a text field receives focus. True fullscreen mode can hide that
 keyboard behind Chromium. The desktop panel or window border may still be
@@ -37,6 +38,7 @@ account requires one.
 | `kiosk_splash_enabled` | `true` | Show the PNG during boot and behind Chromium; set to `false` to disable |
 | `kiosk_splash_image` | `splash.png` | Bundled PNG, or supply a controller-side image path |
 | `kiosk_splash_rotation` | `0` | Rotate the PNG clockwise by 0, 90, 180, or 270 degrees |
+| `kiosk_touch_calibration_enabled` | `true` | Install the measured ILITEK udev calibration rule; disable for other panel orientations |
 
 ## Usage
 
@@ -53,22 +55,24 @@ account requires one.
         kiosk_splash_rotation: 0
 ```
 
-The role includes `roles/kiosk/files/splash.png`. A root service draws the PNG
-once on `/dev/fb0` using `fbi`, before the display manager starts. `swaybg`
-shows the same image as the labwc background until Chromium covers it. This
-follows AnotterKiosk's framebuffer drawing approach without replacing the
-system's init process, detaching virtual consoles, or enabling the kernel's
-fullscreen logo. The service waits at most five seconds for `/dev/fb0` and
-cannot hold up the graphical session for more than ten seconds. If the
-framebuffer is unavailable, the Wayland background can still appear.
+The role includes the standalone `splash` role. It draws the PNG once on
+`/dev/fb0` using `fbi` and shows the same image as the labwc desktop background
+using `swaybg`. The kiosk variables above are passed to `splash` for backward
+compatibility. See [the splash role](../splash/README.md) for standalone usage.
 
-This splash starts after Linux has begun booting; it cannot hide firmware or
-very early kernel messages. Raspberry Pi OS may also show its own Plymouth
-screen. A reboot is required to see the boot splash; a desktop logout/login is
-enough to check the Wayland background. To use another image, set
-`kiosk_splash_image` to an absolute PNG path on the Ansible controller. For a
-portrait panel, adjust
-`kiosk_splash_rotation` after checking the first boot.
+To use another image, set `kiosk_splash_image` to an absolute PNG path on the
+Ansible controller. For a portrait panel, adjust `kiosk_splash_rotation` after
+checking the first boot.
+
+The touchscreen calibration is installed as
+`/etc/udev/rules.d/99-ilitek-touch-calibration.rules`. It matches only ILITEK
+touchscreen events and applies `0 1 0 -1 0 1`, measured for this panel in its
+270-degree orientation. Remove any older `<calibrationMatrix>` from the kiosk
+user's labwc configuration before applying this rule; labwc can override the
+udev default. Reboot after the first run or a change to the rule; reloading
+udev rules alone does not recreate the existing input device. Set
+`kiosk_touch_calibration_enabled: false` if the touchscreen uses another
+orientation.
 
 After the first run, log out and back in or reboot once to start the kiosk
 session. Later role changes to the launcher also take effect after the next

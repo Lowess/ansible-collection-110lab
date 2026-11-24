@@ -1,0 +1,17 @@
+---
+galaxy_info:
+  author: Lowess
+  role_name: splash
+  description: Show a Raspberry Pi boot splash and labwc desktop background.
+  license: MIT
+  min_ansible_version: "2.15"
+  platforms:
+    - name: Debian
+      versions:
+        - all
+  galaxy_tags:
+    - raspberrypi
+    - splash
+    - desktop
+
+dependencies: []

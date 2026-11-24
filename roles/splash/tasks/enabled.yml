@@ -1,0 +1,145 @@
+---
+- name: Install framebuffer and Wayland image viewers
+  ansible.builtin.apt:
+    name:
+      - fbi
+      - swaybg
+      - imagemagick
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+  become: true
+  become_user: root
+
+- name: Create splash work directory
+  ansible.builtin.file:
+    path: /usr/local/share/splash-screen
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  become: true
+  become_user: root
+
+- name: Copy source splash image from Ansible controller
+  ansible.builtin.copy:
+    src: "{{ splash_image }}"
+    dest: /usr/local/share/splash-screen/source.png
+    owner: root
+    group: root
+    mode: "0644"
+  become: true
+  become_user: root
+  register: splash_source
+
+- name: Record splash rotation
+  ansible.builtin.copy:
+    content: "{{ splash_rotation | string }}\n"
+    dest: /usr/local/share/splash-screen/orientation
+    owner: root
+    group: root
+    mode: "0644"
+  become: true
+  become_user: root
+  register: splash_orientation_file
+
+- name: Check prepared splash image
+  ansible.builtin.stat:
+    path: /usr/local/share/splash-screen/splash.png
+  register: splash_prepared
+
+- name: Prepare PNG for framebuffer and desktop background
+  ansible.builtin.command:
+    argv:
+      - convert
+      - /usr/local/share/splash-screen/source.png
+      - -background
+      - black
+      - -rotate
+      - "{{ splash_rotation | string }}"
+      - /usr/local/share/splash-screen/splash.png
+  become: true
+  become_user: root
+  changed_when: true
+  when: >-
+    splash_source.changed or
+    splash_orientation_file.changed or
+    not splash_prepared.stat.exists
+
+- name: Install framebuffer splash launcher
+  ansible.builtin.copy:
+    src: splash-screen.sh
+    dest: /usr/local/bin/splash-screen
+    owner: root
+    group: root
+    mode: "0755"
+  become: true
+  become_user: root
+
+- name: Install framebuffer splash service
+  ansible.builtin.copy:
+    src: splash-screen.service
+    dest: /etc/systemd/system/splash-screen.service
+    owner: root
+    group: root
+    mode: "0644"
+  become: true
+  become_user: root
+  register: splash_service_file
+
+- name: Enable framebuffer splash for next boot
+  ansible.builtin.systemd_service:
+    name: splash-screen.service
+    enabled: true
+    daemon_reload: "{{ splash_service_file.changed }}"
+  become: true
+  become_user: root
+
+- name: Start desktop background with labwc session
+  ansible.builtin.blockinfile:
+    path: "{{ splash_home }}/.config/labwc/autostart"
+    create: true
+    owner: "{{ splash_user }}"
+    mode: "0644"
+    marker: "# {mark} ANSIBLE SPLASH"
+    insertbefore: '^# BEGIN ANSIBLE KIOSK$'
+    block: |
+      /usr/bin/swaybg --image /usr/local/share/splash-screen/splash.png --mode fit --color 000000 >/dev/null 2>&1 &
+      sleep 1
+  become: true
+  become_user: root
+
+- name: Check for legacy kiosk splash service
+  ansible.builtin.stat:
+    path: /etc/systemd/system/kiosk-splash.service
+  register: splash_legacy_service
+
+- name: Disable legacy kiosk splash service
+  ansible.builtin.systemd_service:
+    name: kiosk-splash.service
+    enabled: false
+    state: stopped
+  become: true
+  become_user: root
+  when: splash_legacy_service.stat.exists
+
+- name: Remove legacy kiosk splash service
+  ansible.builtin.file:
+    path: /etc/systemd/system/kiosk-splash.service
+    state: absent
+  become: true
+  become_user: root
+  notify: Reload systemd units
+  when: splash_legacy_service.stat.exists
+
+- name: Remove legacy kiosk splash launcher and images
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  become: true
+  become_user: root
+  loop:
+    - /usr/local/bin/kiosk-splash
+    - /usr/local/share/kiosk/splash.png
+    - /usr/local/share/kiosk/splash-source.png
+    - /usr/local/share/kiosk/splash-orientation

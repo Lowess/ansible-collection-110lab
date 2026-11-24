@@ -1,0 +1,5 @@
+---
+splash_user: pi
+splash_enabled: true
+splash_image: splash.png
+splash_rotation: 0

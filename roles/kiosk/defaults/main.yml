@@ -13,3 +13,6 @@ kiosk_splash_enabled: true
 kiosk_splash_image: splash.png
 # Clockwise rotation of the PNG used by both displays.
 kiosk_splash_rotation: 0
+
+# Calibrate the ILITEK touchscreen mounted with the 270-degree display.
+kiosk_touch_calibration_enabled: true

@@ -1,0 +1,30 @@
+---
+- name: Install ILITEK touchscreen calibration rule
+  ansible.builtin.copy:
+    src: 99-ilitek-touch-calibration.rules
+    dest: /etc/udev/rules.d/99-ilitek-touch-calibration.rules
+    owner: root
+    group: root
+    mode: "0644"
+  become: true
+  become_user: root
+  register: kiosk_touch_rule_installed
+  when: kiosk_touch_calibration_enabled | bool
+
+- name: Remove ILITEK touchscreen calibration rule when disabled
+  ansible.builtin.file:
+    path: /etc/udev/rules.d/99-ilitek-touch-calibration.rules
+    state: absent
+  become: true
+  become_user: root
+  register: kiosk_touch_rule_removed
+  when: not (kiosk_touch_calibration_enabled | bool)
+
+- name: Reload udev rules when touchscreen calibration changes
+  ansible.builtin.command: udevadm control --reload-rules
+  become: true
+  become_user: root
+  changed_when: false
+  when: >-
+    kiosk_touch_rule_installed.changed | default(false) or
+    kiosk_touch_rule_removed.changed | default(false)

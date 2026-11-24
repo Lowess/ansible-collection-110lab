@@ -1,0 +1,32 @@
+---
+- name: Check desktop autostart file
+  ansible.builtin.stat:
+    path: "{{ splash_home }}/.config/labwc/autostart"
+  register: splash_autostart
+
+- name: Remove desktop background autostart block
+  ansible.builtin.blockinfile:
+    path: "{{ splash_home }}/.config/labwc/autostart"
+    marker: "# {mark} ANSIBLE SPLASH"
+    state: absent
+  become: true
+  become_user: root
+  when: splash_autostart.stat.exists
+
+- name: Check framebuffer splash services
+  ansible.builtin.stat:
+    path: "/etc/systemd/system/{{ item }}"
+  loop:
+    - splash-screen.service
+    - kiosk-splash.service
+  register: splash_services
+
+- name: Disable framebuffer splash services
+  ansible.builtin.systemd_service:
+    name: "{{ item.item }}"
+    enabled: false
+    state: stopped
+  become: true
+  become_user: root
+  loop: "{{ splash_services.results }}"
+  when: item.stat.exists
