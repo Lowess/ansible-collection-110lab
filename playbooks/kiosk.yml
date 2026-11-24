@@ -7,6 +7,9 @@
   vars:
     kiosk_url: https://example.com
   roles:
+    - role: splash
+      tags:
+        - splash
     - role: kiosk
       tags:
         - kiosk
